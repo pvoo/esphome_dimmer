@@ -1,0 +1,215 @@
+esphome:
+  name: astra-controller-zolder
+  friendly_name: Astra controller zolder
+  
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: VERBOSE
+
+status_led:
+  pin:
+    number: GPIO4
+    inverted: true
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/esphome/esphome
+      ref: dev
+    components: [ gpio ]
+    refresh: 15min
+  - source: github://Bugracer/esphome-opentherm@main
+
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "ZBigH7D1/wCIMK2EJCvSwVFOZMFNEYuwGleR+t8xGao="
+
+ota:
+  - platform: esphome
+    password: "d821afb3a2ab5fbe4386de5482bbc902"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.1.10
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Astra-Controller-Zolder"
+
+output:
+  - platform: ledc
+    pin: GPIO12
+    id: rtttl_out
+  - platform: ac_dimmer
+    id: dimmer_boiler
+    gate_pin: GPIO15
+    zero_cross_pin: 
+      number: GPIO14
+      mode: INPUT_PULLDOWN
+  # - platform: ledc
+  #   pin: GPIO15
+  #   id: dimmer_boiler_pwm
+  #   frequency: 50.4hz
+  #   channel: 0
+  - platform: opentherm
+    t_set:
+      id: t_set
+      min_value: 10
+      max_value: 65
+      zero_means_zero: true
+
+rtttl:
+  output: rtttl_out
+
+switch:
+  - platform: gpio
+    name: "Hot water (on) Ice (off)"
+    pin: 25
+    id: relay1
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    name: "Hot water gas (on) electric (off)"
+    pin: 26
+    id: relay2
+  - platform: gpio
+    name: "Relay 3"
+    pin: 33
+    id: relay3
+  - platform: gpio
+    name: "Relay 4"
+    pin: 32
+    id: relay4
+  - platform: opentherm
+    ch_enable:
+      name: "Central Heating enabled"
+      mode: restore_default_on
+    dhw_enable:
+      name: "CV Hot water enabled"
+      mode: restore_default_on
+
+fan:
+  - platform: speed
+    output: t_set
+    name: "Central heating modulation"
+  - platform: speed
+    output: dimmer_boiler
+    name: "Electric boiler modulation"
+
+interval:
+  - interval: 5s
+    then:
+      - component.update: temp1
+      - component.update: temp2
+
+one_wire:
+  - platform: gpio
+    pin: 13
+
+sensor:
+  - platform: dallas_temp
+    id: temp1
+    address: 0x1c0000006b529828
+    setup_priority: -100
+    name: "Elecric Boiler temp"
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer-plus"
+    device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 2
+    update_interval: never
+    filters:
+      - filter_out: nan
+      - filter_out: 85.0
+  - platform: dallas_temp
+    id: temp2
+    address: 0xa30000006b5edd28
+    setup_priority: -100
+    name: "Water cooler temp"
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer-plus"
+    device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 2
+    update_interval: never
+    filters:
+      - filter_out: nan
+      - filter_out: 85.0
+  - platform: opentherm
+    rel_mod_level:
+      name: "CH Relative modulation level"
+    ch_pressure:
+      name: "CH Water pressure in circuit"
+    t_boiler:
+      name: "CH water temperature"
+    t_dhw:
+      name: "CH DHW temperature"
+    t_ret:
+      name: "CH Return water temperature"
+  # - platform: pulse_counter
+  #   pin: GPIO14
+  #   name: "Pulse Frequency zc 14"
+  #   unit_of_measurement: "Hz"
+  #   filters:
+  #     - multiply: 0.01666666666
+  #   total: 
+  #     name: "Total pulses zc 14"
+
+opentherm:
+  in_pin: 34
+  out_pin: 27
+  ch_enable: true
+  dhw_enable: true
+
+binary_sensor:
+  - platform: opentherm
+    fault_indication:
+      name: "CH Fault indication"
+    ch_active:
+      name: "Central Heating active"
+    dhw_active:
+      name: "CH Domestic Hot Water active"
+    flame_on:
+      name: "CH Flame on"
+    diagnostic_indication:
+      name: "CH Diagnostic event"
+
+
+# number:
+#   # Input for PWM duty cycle (0-100%)
+#   - platform: template
+#     name: "Dimmer Boiler PWM"
+#     id: pwm_duty_cycle_input
+#     min_value: 0.0
+#     max_value: 100.0
+#     step: 0.01
+#     initial_value: 0
+#     mode: box  # Manual input
+#     set_action:
+#       - output.set_level:
+#           id: dimmer_boiler_pwm
+#           level: !lambda 'return x / 100.0;'
+
+#   # Input for frequency (40-60Hz)
+#   - platform: template
+#     name: "Dimmer Boiler Frequency"
+#     id: pwm_frequency_input
+#     min_value: 40.0
+#     max_value: 60.0
+#     step: 0.01
+#     initial_value: 50.4
+#     mode: box  # Manual input
+#     set_action:
+#       - output.ledc.set_frequency:
+#           id: dimmer_boiler_pwm
+#           frequency: !lambda 'return x;'
