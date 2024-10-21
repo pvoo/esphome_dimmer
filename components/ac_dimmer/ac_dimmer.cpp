@@ -183,6 +183,7 @@ void AcDimmer::setup() {
     this->store_.zero_cross_pin = this->zero_cross_pin_->to_isr();
     this->zero_cross_pin_->attach_interrupt(&AcDimmerDataStore::s_gpio_intr, &this->store_,
                                             gpio::INTERRUPT_FALLING_EDGE);
+    ESP_LOGI(TAG, "Zero-cross pin set up on pin %d", this->zero_cross_pin_->get_pin());
   }
 
 #ifdef USE_ESP8266
@@ -235,9 +236,9 @@ void AcDimmer::dump_config() {
 void AcDimmer::log_stats_() {
   uint32_t now = millis();
   if (now - this->store_.last_stats_log >= 5000) {
-    float frequency = 1e6f / this->store_.cycle_time_us / 2;
-    ESP_LOGI(TAG, "Zero-cross stats: Count=%u, Freq=%.2fHz, Cycle=%uµs",
-             this->store_.zero_cross_count, frequency, this->store_.cycle_time_us);
+    float frequency = (this->store_.cycle_time_us > 0) ? 1e6f / this->store_.cycle_time_us / 2 : 0;
+    ESP_LOGI(TAG, "Zero-cross stats: Count=%u, Freq=%.2fHz, Cycle=%uµs, Last ZC=%u",
+             this->store_.zero_cross_count, frequency, this->store_.cycle_time_us, this->store_.crossed_zero_at);
     
     // Reset counter
     this->store_.zero_cross_count = 0;
