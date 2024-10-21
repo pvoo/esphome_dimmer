@@ -96,10 +96,12 @@ void IRAM_ATTR HOT AcDimmerDataStore::gpio_intr() {
   uint32_t cycle_time = this->crossed_zero_at - prev_crossed;
   if (cycle_time > 5000) {
     this->cycle_time_us = cycle_time;
+    ESP_LOGV(TAG, "Zero-cross detected. Cycle time: %u µs", cycle_time);
   } else {
     // Otherwise this is noise and this is 2nd (or 3rd...) fall in the same pulse
     // Consider this is the right fall edge and accumulate the cycle time instead
     this->cycle_time_us += cycle_time;
+    ESP_LOGV(TAG, "Possible noise detected. Accumulated cycle time: %u µs", this->cycle_time_us);
   }
 
   if (this->value == 65535) {
@@ -225,6 +227,7 @@ void AcDimmer::dump_config() {
 
   LOG_FLOAT_OUTPUT(this);
   ESP_LOGV(TAG, "  Estimated Frequency: %.3fHz", 1e6f / this->store_.cycle_time_us / 2);
+  ESP_LOGV(TAG, "  Last Cycle Time: %u µs", this->store_.cycle_time_us);
 }
 
 }  // namespace ac_dimmer
