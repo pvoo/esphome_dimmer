@@ -24,7 +24,8 @@ external_components:
     components: [ gpio ]
     refresh: 15min
   - source: github://Bugracer/esphome-opentherm@main
-
+  - source: github://pvoo/esphome_dimmer@main
+    components: [ ac_dimmer ]
 
 # Enable Home Assistant API
 api:
@@ -62,12 +63,12 @@ output:
   #   id: dimmer_boiler_pwm
   #   frequency: 50.4hz
   #   channel: 0
-  - platform: opentherm
-    t_set:
-      id: t_set
-      min_value: 10
-      max_value: 65
-      zero_means_zero: true
+  # - platform: opentherm
+  #   t_set:
+  #     id: t_set
+  #     min_value: 10
+  #     max_value: 65
+  #     zero_means_zero: true
 
 rtttl:
   output: rtttl_out
@@ -90,18 +91,18 @@ switch:
     name: "Relay 4"
     pin: 32
     id: relay4
-  - platform: opentherm
-    ch_enable:
-      name: "Central Heating enabled"
-      mode: restore_default_on
-    dhw_enable:
-      name: "CV Hot water enabled"
-      mode: restore_default_on
+  # - platform: opentherm
+  #   ch_enable:
+  #     name: "Central Heating enabled"
+  #     mode: restore_default_on
+  #   dhw_enable:
+  #     name: "CV Hot water enabled"
+  #     mode: restore_default_on
 
 fan:
-  - platform: speed
-    output: t_set
-    name: "Central heating modulation"
+  # - platform: speed
+  #   output: t_set
+  #   name: "Central heating modulation"
   - platform: speed
     output: dimmer_boiler
     name: "Electric boiler modulation"
@@ -145,17 +146,17 @@ sensor:
     filters:
       - filter_out: nan
       - filter_out: 85.0
-  - platform: opentherm
-    rel_mod_level:
-      name: "CH Relative modulation level"
-    ch_pressure:
-      name: "CH Water pressure in circuit"
-    t_boiler:
-      name: "CH water temperature"
-    t_dhw:
-      name: "CH DHW temperature"
-    t_ret:
-      name: "CH Return water temperature"
+  # - platform: opentherm
+  #   rel_mod_level:
+  #     name: "CH Relative modulation level"
+  #   ch_pressure:
+  #     name: "CH Water pressure in circuit"
+  #   t_boiler:
+  #     name: "CH water temperature"
+  #   t_dhw:
+  #     name: "CH DHW temperature"
+  #   t_ret:
+  #     name: "CH Return water temperature"
   # - platform: pulse_counter
   #   pin: GPIO14
   #   name: "Pulse Frequency zc 14"
@@ -165,25 +166,24 @@ sensor:
   #   total: 
   #     name: "Total pulses zc 14"
 
-opentherm:
-  in_pin: 34
-  out_pin: 27
-  ch_enable: true
-  dhw_enable: true
+# opentherm:
+#   in_pin: 34
+#   out_pin: 27
+#   ch_enable: true
+#   dhw_enable: true
 
-binary_sensor:
-  - platform: opentherm
-    fault_indication:
-      name: "CH Fault indication"
-    ch_active:
-      name: "Central Heating active"
-    dhw_active:
-      name: "CH Domestic Hot Water active"
-    flame_on:
-      name: "CH Flame on"
-    diagnostic_indication:
-      name: "CH Diagnostic event"
-
+# binary_sensor:
+#   - platform: opentherm
+#     fault_indication:
+#       name: "CH Fault indication"
+#     ch_active:
+#       name: "Central Heating active"
+#     dhw_active:
+#       name: "CH Domestic Hot Water active"
+#     flame_on:
+#       name: "CH Flame on"
+#     diagnostic_indication:
+#       name: "CH Diagnostic event"
 
 # number:
 #   # Input for PWM duty cycle (0-100%)
