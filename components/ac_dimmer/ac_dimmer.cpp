@@ -4,6 +4,8 @@
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 #include <cmath>
+#include "esphome/core/hal.h"
+#include "esphome/core/application.h"
 
 #ifdef USE_ESP8266
 #include <core_esp8266_waveform.h>
@@ -90,18 +92,13 @@ uint32_t IRAM_ATTR HOT timer_interrupt() {
 void IRAM_ATTR HOT AcDimmerDataStore::gpio_intr() {
   uint32_t prev_crossed = this->crossed_zero_at;
 
-  // 50Hz mains frequency should give a half cycle of 10ms a 60Hz will give 8.33ms
-  // in any case the cycle last at least 5ms
   this->crossed_zero_at = micros();
   uint32_t cycle_time = this->crossed_zero_at - prev_crossed;
   if (cycle_time > 5000) {
     this->cycle_time_us = cycle_time;
-    ESP_LOGV(TAG, "Zero-cross detected. Cycle time: %u µs", cycle_time);
+    this->zero_cross_count++;
   } else {
-    // Otherwise this is noise and this is 2nd (or 3rd...) fall in the same pulse
-    // Consider this is the right fall edge and accumulate the cycle time instead
     this->cycle_time_us += cycle_time;
-    ESP_LOGV(TAG, "Possible noise detected. Accumulated cycle time: %u µs", this->cycle_time_us);
   }
 
   if (this->value == 65535) {
@@ -203,7 +200,11 @@ void AcDimmer::setup() {
   timerAlarmWrite(dimmer_timer, 50, true);
   timerAlarmEnable(dimmer_timer);
 #endif
+
+  // Schedule stats logging
+  App.register_component(this);
 }
+
 void AcDimmer::write_state(float state) {
   state = std::acos(1 - (2 * state)) / 3.14159;  // RMS power compensation
   auto new_value = static_cast<uint16_t>(roundf(state * 65535));
@@ -211,6 +212,7 @@ void AcDimmer::write_state(float state) {
     this->store_.init_cycle = this->init_with_half_cycle_;
   this->store_.value = new_value;
 }
+
 void AcDimmer::dump_config() {
   ESP_LOGCONFIG(TAG, "AcDimmer:");
   LOG_PIN("  Output Pin: ", this->gate_pin_);
@@ -228,6 +230,23 @@ void AcDimmer::dump_config() {
   LOG_FLOAT_OUTPUT(this);
   ESP_LOGV(TAG, "  Estimated Frequency: %.3fHz", 1e6f / this->store_.cycle_time_us / 2);
   ESP_LOGV(TAG, "  Last Cycle Time: %u µs", this->store_.cycle_time_us);
+}
+
+void AcDimmer::log_stats_() {
+  uint32_t now = millis();
+  if (now - this->store_.last_stats_log >= 5000) {
+    float frequency = 1e6f / this->store_.cycle_time_us / 2;
+    ESP_LOGI(TAG, "Zero-cross stats: Count=%u, Freq=%.2fHz, Cycle=%uµs",
+             this->store_.zero_cross_count, frequency, this->store_.cycle_time_us);
+    
+    // Reset counter
+    this->store_.zero_cross_count = 0;
+    this->store_.last_stats_log = now;
+  }
+}
+
+void AcDimmer::loop() {
+  this->log_stats_();
 }
 
 }  // namespace ac_dimmer
