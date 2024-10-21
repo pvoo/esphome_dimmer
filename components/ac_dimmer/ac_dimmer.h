@@ -35,6 +35,11 @@ struct AcDimmerDataStore {
   /// Dimmer method
   DimMethod method;
 
+  /// Counter for zero-cross events
+  uint32_t zero_cross_count = 0;
+  /// Timestamp of last stats log
+  uint32_t last_stats_log = 0;
+
   uint32_t timer_intr(uint32_t now);
 
   void gpio_intr();
@@ -47,6 +52,7 @@ struct AcDimmerDataStore {
 class AcDimmer : public output::FloatOutput, public Component {
  public:
   void setup() override;
+  void loop() override;
 
   void dump_config() override;
   void set_gate_pin(InternalGPIOPin *gate_pin) { gate_pin_ = gate_pin; }
@@ -56,6 +62,7 @@ class AcDimmer : public output::FloatOutput, public Component {
 
  protected:
   void write_state(float state) override;
+  void log_stats_();
 
   InternalGPIOPin *gate_pin_;
   InternalGPIOPin *zero_cross_pin_;
