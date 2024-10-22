@@ -161,13 +161,17 @@ void AcDimmer::setup() {
   // Need to be sure the zero cross pin is setup only once, ESP8266 fails and ESP32 seems to fail silently
   auto setup_zero_cross_pin = true;
 
+  ESP_LOGV(TAG, "Setting up AcDimmer");
+
   for (auto &all_dimmer : all_dimmers) {
     if (all_dimmer == nullptr) {
       all_dimmer = &this->store_;
+      ESP_LOGV(TAG, "Added dimmer to all_dimmers array");
       break;
     }
     if (all_dimmer->zero_cross_pin_number == this->zero_cross_pin_->get_pin()) {
       setup_zero_cross_pin = false;
+      ESP_LOGV(TAG, "Zero cross pin %d already set up", this->zero_cross_pin_->get_pin());
     }
   }
 
